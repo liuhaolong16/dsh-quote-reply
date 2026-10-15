@@ -143,6 +143,15 @@ const guarded = applyIdx >= 0 && tryCount >= 3
 add(guarded ? 'PASS' : 'WARN', 'F 不打断宿主 boot', 'apply() 内 try/catch 块数=' + tryCount + '（两项注册各自 try + 顶部状态写入 try）')
 add(host.indexOf('export function apply') >= 0 && host.indexOf('export const name') >= 0 ? 'PASS' : 'FAIL', 'F 宿主半体导出形状', 'name + apply 具名导出（与 ai-workbench 一致）')
 
+// ── H2. 客户端入口契约：exports 必须同时含 '.' 与 './client'（v0.9.1 · 发布前必查）──
+//    依据：profile/node_modules 下已装副本正是这个映射；宿主/工具按 './client' 键解析客户端半体。
+try {
+  const _pkg = JSON.parse(require('fs').readFileSync(require('path').join(__dirname, 'package.json'), 'utf8'));
+  const _ex = _pkg.exports || {};
+  if (!_ex['.'] || !_ex['./client']) add('FAIL', 'H 客户端入口契约', "exports 必须同时含 '.' 与 './client'，实为 " + JSON.stringify(_ex));
+  else add('PASS', 'H 客户端入口契约', "exports '.':" + _ex['.'] + " · './client':" + _ex['./client']);
+} catch (_e) { add('FAIL', 'H 客户端入口契约', String((_e && _e.message) || _e)); }
+
 // ── G. 包元数据与版本一致（v0.9.0 新增）──
 // 为什么值得单列两项：① package.json 是历史事故点（BOM、ASCII 双引号都让它变成非法 JSON）；
 // ② 客户端半体**会自己热更、宿主半体不会**（本机实测）⇒ "新客户端 + 旧宿主"是常态，
