@@ -66,7 +66,11 @@ add(synClient === 'ok' ? 'PASS' : 'FAIL', 'A 客户端半体语法', synClient)
 
 // ── B/C. 对源文件核对 API ──
 let asar = null
-try { asar = fs.readFileSync(ASAR) } catch (e) { add('FAIL', 'B 读 DSH 源文件', '读不到 ' + ASAR + '：' + e.message) }
+try { asar = fs.readFileSync(ASAR) } catch (e) {
+  if (fs.existsSync(ASAR)) add('FAIL', 'B 读 DSH 源文件', '读不到 ' + ASAR + '：' + e.message)
+  else add('INFO', 'B 读 DSH 源文件', '未找到宿主 asar（异机/CI）⇒ 与「源文件核对 API」「出厂先例」相关的项一律显形跳过，不计入通过：' + ASAR)
+}
+if (!asar) add('INFO', 'B/C 契约与先例对照', '无 asar ⇒ 上下文签名核对、出厂先例、路由占用三项均显形跳过（在装有 DSH 的机器上重跑才算数）')
 const has = (s) => !!asar && asar.indexOf(Buffer.from(s, 'utf8')) >= 0
 if (asar) {
   add(has('context(context: PromptContext): () => void') ? 'PASS' : 'FAIL', 'B systemPrompt.context 签名',
@@ -114,7 +118,7 @@ for (const f of installed) {
 }
 add(routeClash.length === 0 ? 'PASS' : 'FAIL', 'D 路由前缀不撞车', routeClash.length ? '被占用：' + routeClash.join(', ') : MY_ROUTE + ' 未被任何已装插件注册')
 add(nameClash.length === 0 ? 'PASS' : 'FAIL', 'D 上下文名不撞车', nameClash.length ? '被占用：' + nameClash.join(', ') : 'name="' + MY_CONTEXT_NAME + '" 未被别的插件用作 prompt context')
-add(has(MY_ROUTE) ? 'WARN' : 'PASS', 'D 出厂是否已占用该路由', has(MY_ROUTE) ? 'asar 里出现过 ' + MY_ROUTE + '（需人工确认是不是路由）' : '出厂未占用 ' + MY_ROUTE)
+add(!asar ? 'INFO' : (has(MY_ROUTE) ? 'WARN' : 'PASS'), 'D 出厂是否已占用该路由', !asar ? '无 asar ⇒ 无法核对，显形跳过（**不得**当作「未占用」）' : (has(MY_ROUTE) ? 'asar 里出现过 ' + MY_ROUTE + '（需人工确认是不是路由）' : '出厂未占用 ' + MY_ROUTE))
 // 槽位 id：与出厂占用者比对（占用者名单来自活体 Slots 自省，记录在此以便复核）
 for (const s of MY_SLOTS) {
   const clash = s.known.includes(s.id)
